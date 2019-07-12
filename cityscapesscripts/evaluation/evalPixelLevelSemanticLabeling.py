@@ -10,10 +10,10 @@
 # If the default implementation of the method works, then it's most likely
 # that our evaluation server will be able to process your results as well.
 #
-# Note that the script is a lot faster, if you enable cython support.
+# Note that the script is a faster, if you enable cython support.
 # WARNING: Cython only tested for Ubuntu 64bit OS.
 # To enable cython, run
-# setup.py build_ext --inplace
+# CYTHONIZE_EVAL= python setup.py build_ext --inplace
 #
 # To run this script, make sure that your results are images,
 # where pixels encode the class IDs as defined in labels.py.
@@ -24,7 +24,7 @@
 # evaluation.
 
 # python imports
-from __future__ import print_function
+from __future__ import print_function, absolute_import, division
 import os, sys
 import platform
 import fnmatch
@@ -35,8 +35,7 @@ except ImportError:
     izip = zip
 
 # Cityscapes imports
-sys.path.append( os.path.normpath( os.path.join( os.path.dirname( __file__ ) , '..' , 'helpers' ) ) )
-from csHelpers import *
+from cityscapesscripts.helpers.csHelpers import *
 
 # C Support
 # Enable the cython support for faster evaluation
@@ -45,7 +44,7 @@ CSUPPORT = True
 # Check if C-Support is available for better performance
 if CSUPPORT:
     try:
-        import addToConfusionMatrix
+        from cityscapesscripts.evaluation import addToConfusionMatrix
     except:
         CSUPPORT = False
 
@@ -585,12 +584,19 @@ def evaluatePair(predictionImgFileName, groundTruthImgFileName, confMatrix, inst
         # using cython
         confMatrix = addToConfusionMatrix.cEvaluatePair(predictionNp, groundTruthNp, confMatrix, args.evalLabels)
     else:
-        # the slower python way
-        for (groundTruthImgPixel,predictionImgPixel) in izip(groundTruthImg.getdata(),predictionImg.getdata()):
-            if (not groundTruthImgPixel in args.evalLabels):
-                printError("Unknown label with id {:}".format(groundTruthImgPixel))
+        # the slower python way 
+        encoding_value = max(groundTruthNp.max(), predictionNp.max()).astype(np.int32) + 1
+        encoded = (groundTruthNp.astype(np.int32) * encoding_value) + predictionNp
 
-            confMatrix[groundTruthImgPixel][predictionImgPixel] += 1
+        values, cnt = np.unique(encoded, return_counts=True)
+
+        for value, c in zip(values, cnt):
+            pred_id = value % encoding_value
+            gt_id = int((value - pred_id)/encoding_value)
+            if not gt_id in args.evalLabels:
+                printError("Unknown label with id {:}".format(gt_id))
+            confMatrix[gt_id][pred_id] += c
+        
 
     if args.evalInstLevelScore:
         # Generate category masks

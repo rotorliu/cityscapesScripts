@@ -6,8 +6,7 @@
 ## Import modules
 #################
 
-# pyqt for everything graphical
-from PyQt4 import QtGui, QtCore
+from __future__ import print_function, absolute_import, division
 # get command line parameters
 import sys
 # walk directories
@@ -30,14 +29,25 @@ except:
 # copy stuff
 import copy
 
+# the label tool was originally written for python 2 and pyqt4
+# in order to enable compatibility with python 3, we need
+# to fix the pyqt api to the old version that is default in py2
+import sip
+apis = ['QDate', 'QDateTime', 'QString', 'QTextStream', 'QTime', 'QUrl', 'QVariant']
+for a in apis:
+    sip.setapi(a, 1)
+
+# import pyqt for everything graphical
+from PyQt4 import QtGui, QtCore
+
+
 #################
 ## Helper classes
 #################
 
 # annotation helper
-sys.path.append( os.path.normpath( os.path.join( os.path.dirname( __file__ ) , '..' , 'helpers' ) ) )
-from annotation import Point, Annotation, CsObject
-from labels     import name2label, assureSingleInstanceName
+from cityscapesscripts.helpers.annotation import Point, Annotation, CsPoly
+from cityscapesscripts.helpers.labels     import name2label, assureSingleInstanceName
 
 # Helper class that contains the current configuration of the Gui
 # This config is loaded when started and saved when leaving
@@ -2183,7 +2193,7 @@ class CityscapesLabelTool(QtGui.QMainWindow):
             defaultLabel = self.defaultLabel
 
         # List of possible labels
-        items = QtCore.QStringList(name2label.keys())
+        items = QtCore.QStringList(list(name2label.keys()))
         items.sort()
         default = items.indexOf(defaultLabel)
         if default < 0:
@@ -2234,7 +2244,9 @@ class CityscapesLabelTool(QtGui.QMainWindow):
         self.drawPolyClosed = True
         for act in self.actClosedPoly:
             act.setEnabled(True)
-        message = "What should I do with the polygon? Press n to create a new object, press Ctrl + Left Click to intersect with another object"
+        message = "What should I do with the polygon? Press n to create a new object, "
+        message += "press Ctrl + Shift + Left Click to intersect with another object, "
+        message += "press Ctrl + Alt + Left Click to merge with another object."
         self.statusBar().showMessage(message)
 
     # Intersect the drawn polygon with the mouse object
@@ -2356,7 +2368,7 @@ class CityscapesLabelTool(QtGui.QMainWindow):
 
         # New object
         # Insert the object in the labels list
-        obj          = CsObject()
+        obj          = CsPoly()
         obj.label    = label
 
         obj.polygon = [ Point(p.x(),p.y()) for p in polygon ]
@@ -2517,7 +2529,7 @@ class CityscapesLabelTool(QtGui.QMainWindow):
             # The label of the object
             name      = obj.label
             # If we do not know a color for this label, skip
-            if not name2label.has_key( name ):
+            if name not in name2label:
                 continue
             # If we do not blur this label, skip
             if not name in searchedNames:

@@ -4,11 +4,14 @@
 #
 
 # Python imports
+from __future__ import print_function, absolute_import, division
 import os, sys, getopt
 import glob
 import math
 import json
 from collections import namedtuple
+import logging 
+import traceback
 
 # Image processing
 # Check if PIL is actually Pillow as expected
@@ -35,10 +38,17 @@ except:
 
 # Cityscapes modules
 try:
-    from annotation   import Annotation
-    from labels       import labels, name2label, id2label, trainId2label, category2labels
+    from cityscapesscripts.helpers.annotation import Annotation
+    from cityscapesscripts.helpers.labels import labels, name2label, id2label, trainId2label, category2labels
+except ImportError as err:
+    print("Failed to import all Cityscapes modules: %s" % err)
+    sys.exit(-1)
+except Exception as e:
+    logging.error(traceback.format_exc())
+    sys.exit(-1)
 except:
-    print("Failed to find all Cityscapes modules")
+    print("Unexpected error in loading Cityscapes modules")
+    print(sys.exc_info()[0])
     sys.exit(-1)
 
 # Print an error message and quit

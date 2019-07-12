@@ -6,8 +6,7 @@
 ## Import modules
 #################
 
-# pyqt for everything graphical
-from PyQt4 import QtGui, QtCore
+from __future__ import print_function, absolute_import, division
 # get command line parameters
 import sys
 # walk directories
@@ -29,15 +28,25 @@ try:
 except:
     pass
 
+# the label tool was originally written for python 2 and pyqt4
+# in order to enable compatibility with python 3, we need
+# to fix the pyqt api to the old version that is default in py2
+import sip
+apis = ['QDate', 'QDateTime', 'QString', 'QTextStream', 'QTime', 'QUrl', 'QVariant']
+for a in apis:
+    sip.setapi(a, 1)
+
+# import pyqt for everything graphical
+from PyQt4 import QtGui, QtCore
+
 #################
 ## Helper classes
 #################
 
 # annotation helper
-sys.path.append( os.path.normpath( os.path.join( os.path.dirname( __file__ ) , '..' , 'helpers' ) ) )
-from annotation  import Annotation, CsObjectType
-from labels     import name2label, assureSingleInstanceName
-from labels_cityPersons import name2labelCp
+from cityscapesscripts.helpers.annotation  import Annotation, CsObjectType
+from cityscapesscripts.helpers.labels     import name2label, assureSingleInstanceName
+from cityscapesscripts.helpers.labels_cityPersons import name2labelCp
 
 #################
 ## Main GUI class
@@ -177,7 +186,7 @@ class CityscapesViewer(QtGui.QMainWindow):
         self.toolbar = self.addToolBar('Tools')
 
         # Add the tool buttons
-        iconDir = os.path.join( os.path.dirname(sys.argv[0]) , 'icons' )
+        iconDir = os.path.join( os.path.dirname(__file__) , 'icons' )
 
         # Loading a new city
         loadAction = QtGui.QAction(QtGui.QIcon( os.path.join( iconDir , 'open.png' )), '&Tools', self)
@@ -452,6 +461,8 @@ class CityscapesViewer(QtGui.QMainWindow):
 
     # Load the currently selected city if possible
     def loadCity(self):
+        # clear annotations
+        self.annotation = []
         # Search for all *.pngs to get the image list
         self.images = []
         if os.path.isdir(self.city):
@@ -556,7 +567,7 @@ class CityscapesViewer(QtGui.QMainWindow):
 
         if self.dispImg:
             dispNp = np.array( self.dispImg )
-            dispNp /= 128
+            dispNp = dispNp / 128.
             dispNp.round()
             dispNp = np.array( dispNp , dtype=np.uint8 )
 
